@@ -5,9 +5,9 @@ from app.core.config import load_config
 #from app.core.db import init_db
 
 async def main():
-    logging.basicConfig(level=logging.INFO)
     config = load_config()
-    print(config.BOT_TOKEN)
+    logging.basicConfig(level=config.LOG_LEVEL)
+    logging.debug(config.BOT_TOKEN)
     bot = Bot(token=config.BOT_TOKEN)
 
     dp = Dispatcher()

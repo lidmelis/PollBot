@@ -5,7 +5,7 @@ from pydantic import Field
 class Config(BaseSettings):
     BOT_TOKEN: str = Field(..., env="BOT_TOKEN")  # Токен Telegram-бота
     #DB_URL: str = Field(..., env="DB_URL")        # URL для подключения к базе данных
-    #LOG_LEVEL: str = Field("INFO", env="LOG_LEVEL")  # Уровень логирования (опционально)
+    LOG_LEVEL: str = Field("INFO", env="LOG_LEVEL")  # Уровень логирования
 
     class Config:
         env_file = ".env"  # Указываем, что настройки загружаются из .env файла
