@@ -1,10 +1,11 @@
 from aiogram import Router, types
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
 
 router = Router()
 
-@router.message(commands=["start"])
+@router.message(Command("start"))
 async def start_command(message: Message, state: FSMContext):
     await state.clear()  # Сброс состояния
     await message.answer(
@@ -15,4 +16,3 @@ async def start_command(message: Message, state: FSMContext):
         "- Помогать в опросах и анкетах\n"
         "Если ты готов, просто введите /forms, и мы начнем!\n"
     )
-    

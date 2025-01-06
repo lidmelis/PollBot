@@ -1,7 +1,8 @@
 import logging
 from aiogram import Bot, Dispatcher
 from app.core.config import load_config
-#from app.bot.commands import register_handlers
+from app.bot.handlers import help 
+from app.bot.commands import register_handlers
 #from app.core.db import init_db
 
 async def main():
@@ -16,10 +17,11 @@ async def main():
     # await init_db(config.DB_URL)
 
     # Регистрация хендлеров
-    # register_handlers(dp)
+    register_handlers(dp)
 
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
+    
