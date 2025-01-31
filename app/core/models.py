@@ -1,32 +1,40 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, TIMESTAMP
 from app.core.db import Base
 import datetime
 
 
 class User(Base):
-    tablename = "users_test"
+    __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    peer_id = Column(Integer, primary_key=True, index=True)
+    peer_id = Column(Integer, index=True, unique=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    username = Column(String, unique=True, index=True, nullable=False)
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
 
 
 class Poll(Base):
-    tablename = "polls"
-    # Column("user_id", Integer, ForeignKey("user.user_id"), nullable=False),
+    __tablename__ = "polls"
     id = Column(Integer, primary_key=True, index=True)
-    peer_id = Column(Integer, ForeignKey("users_test.peer_id"), nullable=False)
+    peer_id = Column(Integer, ForeignKey("users.peer_id"), nullable=False)
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
+    is_single_use = Column(Boolean, default=False)
     
 class Question(Base):
-    tablename = "questions"
-    # Column("user_id", Integer, ForeignKey("user.user_id"), nullable=False),
+    __tablename__ = "questions"
+    id = Column(Integer, primary_key=True, index=True)
     poll_id = Column(Integer, ForeignKey("polls.id"), nullable=False)
     text = Column(String, nullable=False)
+    with_options = Column(Boolean, default=False, nullable=False)
+    with_multipy_options = Column(Boolean, default=False, nullable=False)
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
+
+class Reply(Base):
+    __tablename__ = "replies"
+    id = Column(Integer, primary_key=True, index=True)
+    question_id = Column(Integer, index=True, nullable=False)
+    peer_id = Column(Integer, index=True,  nullable=False)
+    reply = Column(String, default="")
