@@ -1,0 +1,31 @@
+version: "3.9"
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      - BOT_TOKEN=8195217921:AAE-FKR0BGv5ibd-9q5zcrHUSK7AYKGeXQ4
+      - LOG_LEVEL=DEBUG
+      - DB_URL=postgresql+asyncpg://user:password@db:5432/polldb
+
+
+    ports:
+      - "8000:8000" # Настройте порт для приложения, если нужно.
+
+  db:
+    image: postgres:15
+    container_name: db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: polldb
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
