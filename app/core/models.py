@@ -30,6 +30,11 @@ class Question(Base):
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
 
+'''class Option(Base):
+    id = Column(Integer, primary_key=True, index=True)
+    text = Column(String, nullable=False)
+    question_id = Column(Integer, index=True, nullable=False)'''
+
 class Reply(Base):
     __tablename__ = "replies"
     id = Column(Integer, primary_key=True, index=True)
