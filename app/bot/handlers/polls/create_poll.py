@@ -1,10 +1,10 @@
 import asyncio
 import logging
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.chat_action import ChatActionSender
 from app.core.db import get_db
 from app.core.models import Poll, Question
@@ -17,18 +17,27 @@ class PollFSM(StatesGroup):
     answer_type = State()
 
 
-answer_type_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
+choose_options_keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
         [
-            KeyboardButton(text="Произвольный ответ"),
-            KeyboardButton(text="Одиночный ответ"),
+            InlineKeyboardButton(text="Произвольный ответ", callback_data="arbitrary_choice")
         ],
-        [
-            KeyboardButton(text="Множественный ответ"),
-            KeyboardButton(text="Закончить опрос"),
+        [   
+            InlineKeyboardButton(text="Одиночный ответ", callback_data="single_choice")
+        ],
+        [   
+            InlineKeyboardButton(text="Множественный ответ",callback_data="multipy_choice")
         ]
-    ],
-    resize_keyboard=True
+    ]
+)
+
+
+end_keyboard = InlineKeyboardMarkup(
+    inline_keyboard = [
+        [
+            InlineKeyboardButton(text="Закончить опрос", callback_data="end_poll")
+        ]
+    ]
 )
 
 
@@ -69,17 +78,13 @@ async def capture_description(message: Message, state: FSMContext):
         db.add(new_poll)
         await db.commit()
         await state.update_data(poll_id=new_poll.id)
-        await message.answer(f"Опрос '{title}' создан! Задайте ваш первый вопрос.")
+        await message.answer(f"Задайте ваш первый вопрос")
         logging.info(f"Создан новый опрос: {title}")
     await state.set_state(PollFSM.question)
 
 
 @router.message(F.text, PollFSM.question)
 async def capture_question(message: Message, state: FSMContext):
-    if message.text == "Конец":
-        await state.clear()
-        return 
-    
     if len(message.text) > 500:
         await message.answer("Вопрос не должен превышать 500 символов.\nВведите более короткий вопрос")
         return
@@ -87,32 +92,42 @@ async def capture_question(message: Message, state: FSMContext):
     await state.update_data(question=message.text)
     await message.answer(
         "Отлично! Выберите формат ответа.",
-        reply_markup=answer_type_keyboard
+        reply_markup=choose_options_keyboard
     )
     await state.set_state(PollFSM.answer_type)
 
 
-@router.message(F.text, PollFSM.answer_type)
-async def capture_answer_type(message: Message, state: FSMContext):
+@router.callback_query(lambda c: c.data in ["arbitrary_choice", "single_choice", "multipy_choice"])
+async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMContext):
+    await callback_query.answer() 
     with_options = False
     with_multipy_options = False
-    match  message.text:
-        case "Произвольный ответ":
+    match callback_query.data:
+        case "arbitrary_choice":
             pass
-        case "Одиночный ответ":
+        case "single_choice":
             with_options = True
-        case "Множественный ответ":
+        case "multipy_choice":
             with_options = True
             with_multipy_options = True
         case _:
-            await message.answer("Формат ответа не совпадает с возможными.\nВыберите другой")
+            await callback_query.message.answer("Формат ответа не совпадает с возможными.\nВыберите другой")
             return
     data = await state.get_data()
     async for db in get_db():
         question = Question(with_options=with_options, with_multipy_options=with_multipy_options, poll_id=data.get("poll_id"), text=data.get("question"))
         db.add(question)
         await db.commit()
-        await message.answer(f"Вопрос добален.\nЗадайте следующий.")
+        await callback_query.message.answer(
+            f"Вопрос добален.\nЗадайте следующий",
+            reply_markup=end_keyboard
+        )
         logging.info(f"Добавлен вопрос: {question}")
     await state.set_state(PollFSM.question)
+
+@router.callback_query(lambda c: c.data in ["end_poll"])
+async def capture_end(callback_query: types.CallbackQuery, state: FSMContext):
+    await callback_query.answer() 
+    await callback_query.message.answer(f"Опрос создан", reply_markup=None)
+    await state.clear()
 
