@@ -4,10 +4,11 @@ from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionSender
 from app.core.db import get_db
 from app.core.models import Poll, Question
+from app.bot.keyboards import choose_options_keyboard, end_keyboard
 
       
 class PollFSM(StatesGroup):
@@ -15,30 +16,6 @@ class PollFSM(StatesGroup):
     description = State()
     question = State()
     answer_type = State()
-
-
-choose_options_keyboard = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Произвольный ответ", callback_data="arbitrary_choice")
-        ],
-        [   
-            InlineKeyboardButton(text="Одиночный ответ", callback_data="single_choice")
-        ],
-        [   
-            InlineKeyboardButton(text="Множественный ответ",callback_data="multipy_choice")
-        ]
-    ]
-)
-
-
-end_keyboard = InlineKeyboardMarkup(
-    inline_keyboard = [
-        [
-            InlineKeyboardButton(text="Закончить опрос", callback_data="end_poll")
-        ]
-    ]
-)
 
 
 router = Router()
@@ -124,6 +101,7 @@ async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMCon
         )
         logging.info(f"Добавлен вопрос: {question}")
     await state.set_state(PollFSM.question)
+
 
 @router.callback_query(lambda c: c.data in ["end_poll"])
 async def capture_end(callback_query: types.CallbackQuery, state: FSMContext):

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, TIMESTAMP
+from sqlalchemy.orm import relationship
 from app.core.db import Base
 import datetime
 
@@ -19,6 +20,9 @@ class Poll(Base):
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     is_single_use = Column(Boolean, default=False)
+    first_question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
+    questions = relationship("Question", back_populates="poll")
+    first_question = relationship("Question", foreign_keys=[first_question_id])
     
 class Question(Base):
     __tablename__ = "questions"
@@ -29,11 +33,18 @@ class Question(Base):
     with_multipy_options = Column(Boolean, default=False, nullable=False)
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
+    next_question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
+    prev_question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
+    poll = relationship("Poll", back_populates="questions")
+    next_question = relationship("Question", remote_side=[id], foreign_keys=[next_question_id], post_update=True)
+    prev_question = relationship("Question", remote_side=[id], foreign_keys=[prev_question_id], post_update=True)
+
 
 '''class Option(Base):
     id = Column(Integer, primary_key=True, index=True)
     text = Column(String, nullable=False)
     question_id = Column(Integer, index=True, nullable=False)'''
+
 
 class Reply(Base):
     __tablename__ = "replies"
