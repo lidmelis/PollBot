@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, TIMESTAMP
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from app.core.db import Base
 import datetime
 
@@ -12,7 +12,7 @@ class User(Base):
 
 
 class Poll(Base):
-    __tablename__ = "polls"
+    __tablename__ = "polls"  # Fixed double underscores
     id = Column(Integer, primary_key=True, index=True)
     peer_id = Column(Integer, ForeignKey("users.peer_id"), nullable=False)
     title = Column(String, nullable=False)
@@ -21,11 +21,24 @@ class Poll(Base):
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     is_single_use = Column(Boolean, default=False)
     first_question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
-    questions = relationship("Question", back_populates="poll")
-    first_question = relationship("Question", foreign_keys=[first_question_id])
-    
+
+    # Explicitly specify foreign key for questions relationship
+    questions = relationship(
+        "Question",
+        back_populates="poll",
+        foreign_keys="Question.poll_id"  # Add this line
+    )
+
+    # First question relationship
+    first_question = relationship(
+        "Question",
+        foreign_keys=[first_question_id],  # Explicit foreign key
+        post_update=True,
+        uselist=False,
+    )
+
 class Question(Base):
-    __tablename__ = "questions"
+    __tablename__ = "questions"  # Fixed double underscores
     id = Column(Integer, primary_key=True, index=True)
     poll_id = Column(Integer, ForeignKey("polls.id"), nullable=False)
     text = Column(String, nullable=False)
@@ -34,10 +47,27 @@ class Question(Base):
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     next_question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
-    prev_question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
-    poll = relationship("Poll", back_populates="questions")
-    next_question = relationship("Question", remote_side=[id], foreign_keys=[next_question_id], post_update=True)
-    prev_question = relationship("Question", remote_side=[id], foreign_keys=[prev_question_id], post_update=True)
+
+    # Explicit poll relationship
+    poll = relationship(
+        "Poll",
+        back_populates="questions",
+        foreign_keys=[poll_id]  # Add this line
+    )
+
+    # Linked list relationships
+    next_question = relationship(
+        "Question",
+        foreign_keys=[next_question_id],
+        remote_side=[id],
+        backref=backref(
+            "previous_question",
+            remote_side=[id],
+            uselist=False
+        ),
+        post_update=True,
+        uselist=False
+    )
 
 
 '''class Option(Base):
