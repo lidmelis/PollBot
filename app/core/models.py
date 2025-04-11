@@ -20,22 +20,8 @@ class Poll(Base):
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     is_single_use = Column(Boolean, default=False)
-    first_question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
+    first_question_id = Column(Integer, nullable=True)
 
-    # Explicitly specify foreign key for questions relationship
-    questions = relationship(
-        "Question",
-        back_populates="poll",
-        foreign_keys="Question.poll_id"  # Add this line
-    )
-
-    # First question relationship
-    first_question = relationship(
-        "Question",
-        foreign_keys=[first_question_id],  # Explicit foreign key
-        post_update=True,
-        uselist=False,
-    )
 
 class Question(Base):
     __tablename__ = "questions"  # Fixed double underscores
@@ -46,32 +32,11 @@ class Question(Base):
     with_multipy_options = Column(Boolean, default=False, nullable=False)
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
-    next_question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
-
-    # Explicit poll relationship
-    poll = relationship(
-        "Poll",
-        back_populates="questions",
-        foreign_keys=[poll_id]  # Add this line
-    )
-
-    # Linked list relationships
-    next_question = relationship(
-        "Question",
-        foreign_keys=[next_question_id],
-        remote_side=[id],
-        backref=backref(
-            "previous_question",
-            remote_side=[id],
-            uselist=False
-        ),
-        post_update=True,
-        uselist=False
-    )
-
+    next_question_id = Column(Integer, nullable=True)
+    prev_question_id = Column(Integer, nullable=True)
 
 '''class Option(Base):
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     text = Column(String, nullable=False)
     question_id = Column(Integer, index=True, nullable=False)'''
 

@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionSender
+from sqlalchemy.future import select
 from app.core.db import get_db
 from app.core.models import Poll, Question
 from app.bot.keyboards import choose_options_keyboard, end_keyboard
@@ -16,7 +17,7 @@ class PollFSM(StatesGroup):
     description = State()
     question = State()
     answer_type = State()
-
+    options = State()
 
 router = Router()
 
@@ -55,6 +56,7 @@ async def capture_description(message: Message, state: FSMContext):
         db.add(new_poll)
         await db.commit()
         await state.update_data(poll_id=new_poll.id)
+        await state.update_data(first_question=True)
         await message.answer(f"Задайте ваш первый вопрос")
         logging.info(f"Создан новый опрос: {title}")
     await state.set_state(PollFSM.question)
@@ -93,6 +95,36 @@ async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMCon
     data = await state.get_data()
     async for db in get_db():
         question = Question(with_options=with_options, with_multipy_options=with_multipy_options, poll_id=data.get("poll_id"), text=data.get("question"))
+        if data.get("first_question") == True:
+            '''poll = db.query(Poll).filter(
+                Poll.id == data.get("poll_id")
+                ).first()'''
+            
+            result = await db.execute(
+                select(Poll).filter(Poll.id == data.get("poll_id"))
+                )
+            poll = result.scalars().first()
+
+
+            poll.first_question_id = question.id
+            await state.update_data(first_question=False)
+            await state.update_data(prev_question_id = question.id)
+
+        else:
+            '''prev_question = db.query(Question).filter(
+                Question.poll_id == data.get("poll_id"),
+                Question.next_question_id == None
+            ).order_by(Question.id.desc()).first()'''
+
+            result = await db.execute(
+                select(Question).filter(
+                    Question.poll_id == data.get("poll_id"),
+                    Question.next_question_id == None
+                    ).order_by(Question.id.desc())
+                )
+            prev_question = result.scalars().first()
+
+
         db.add(question)
         await db.commit()
         await callback_query.message.answer(
