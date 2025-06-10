@@ -47,3 +47,8 @@ help:
 	@echo "  run        Запустить приложение"
 	@echo "  clean      Очистить проект"
 	@echo "  help       Показать эту справку"
+
+rebuild:
+	docker compose down
+	docker compose build --no-cache
+	docker compose up -d

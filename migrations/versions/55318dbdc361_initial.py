@@ -1,8 +1,8 @@
 """Initial
 
-Revision ID: b5729a7ddb2b
+Revision ID: 55318dbdc361
 Revises: 
-Create Date: 2025-06-02 20:14:11.031538
+Create Date: 2025-03-10 19:45:14.888884
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b5729a7ddb2b'
+revision: str = '55318dbdc361'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -46,7 +46,6 @@ def upgrade() -> None:
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('is_single_use', sa.Boolean(), nullable=True),
-    sa.Column('first_question_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['peer_id'], ['users.peer_id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -59,8 +58,6 @@ def upgrade() -> None:
     sa.Column('with_multipy_options', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
-    sa.Column('next_question_id', sa.Integer(), nullable=True),
-    sa.Column('prev_question_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['poll_id'], ['polls.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

@@ -4,7 +4,7 @@ from typing import Literal
 
 class Config(BaseSettings):
     BOT_TOKEN: str = Field(..., env="BOT_TOKEN")  
-    DB_URL: PostgresDsn = Field(..., env="DB_URL")
+    DB_URL: str = Field(..., env="DB_URL")
     LOG_LEVEL: str = Field("INFO", env="LOG_LEVEL")
     ENV: Literal["local", "docker", "prod"] = Field("local", env="ENV")
     
