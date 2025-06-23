@@ -1,14 +1,10 @@
 import sys
 import os
 
-# Добавляем корень проекта в PYTHONPATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
+from sqlalchemy import engine_from_config, pool
 from alembic import context
 from app.core.db import Base
 
@@ -16,16 +12,25 @@ from app.core.db import Base
 # access to the values within the .ini file in use.
 config = context.config
 
+
+database_url = os.getenv("ALEMBIC_URL")
+if not database_url:
+    raise ValueError("ALEMBIC_URL environment variable is not set")
+config.set_main_option("sqlalchemy.url", database_url)
+
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
+
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -52,10 +57,8 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
-
     with context.begin_transaction():
         context.run_migrations()
-
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.

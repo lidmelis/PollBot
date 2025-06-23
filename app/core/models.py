@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, TIMESTAMP
-from sqlalchemy.orm import relationship, backref
 from app.core.db import Base
 import datetime
 
@@ -34,6 +33,7 @@ class Question(Base):
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow, nullable=False)
     next_question_id = Column(Integer, nullable=True)
     prev_question_id = Column(Integer, nullable=True)
+
 
 '''class Option(Base):
     id = Column(Integer, primary_key=True)

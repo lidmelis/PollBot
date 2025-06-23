@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field, PostgresDsn
+from pydantic import Field
 from typing import Literal
 
 class Config(BaseSettings):
@@ -14,5 +14,5 @@ class Config(BaseSettings):
         extra = "ignore"
 
 def load_config(env: str = "local") -> Config:
-    env_file = f".env.{env}"
+    env_file = ".env" 
     return Config(_env_file=env_file)
