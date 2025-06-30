@@ -59,6 +59,8 @@ async def capture_description(message: Message, state: FSMContext):
         await state.update_data(first_question=True)
         await message.answer(f"Задайте ваш первый вопрос")
         logging.info(f"Создан новый опрос: {title}")
+    data = await state.get_data()
+    logging.debug(f"first_question={data.get('first_question')}")
     await state.set_state(PollFSM.question)
 
 
@@ -78,6 +80,7 @@ async def capture_question(message: Message, state: FSMContext):
 
 @router.callback_query(lambda c: c.data in ["arbitrary_choice", "single_choice", "multipy_choice"])
 async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMContext):
+    logging.debug("entered capture_answer_type")
     await callback_query.answer() 
     with_options = False
     with_multipy_options = False
@@ -92,41 +95,39 @@ async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMCon
         case _:
             await callback_query.message.answer("Формат ответа не совпадает с возможными.\nВыберите другой")
             return
-    data = await state.get_data()
     async for db in get_db():
+        data = await state.get_data()
         question = Question(with_options=with_options, with_multipy_options=with_multipy_options, poll_id=data.get("poll_id"), text=data.get("question"))
+        logging.debug(f"question={question}")
+        logging.debug(data.get("first_question"))
         if data.get("first_question") == True:
-            '''poll = db.query(Poll).filter(
-                Poll.id == data.get("poll_id")
-                ).first()'''
-            
+            logging.debug("its first question")
             result = await db.execute(
                 select(Poll).filter(Poll.id == data.get("poll_id"))
                 )
             poll = result.scalars().first()
-
-
             poll.first_question_id = question.id
             await state.update_data(first_question=False)
             await state.update_data(prev_question_id = question.id)
+            logging.debug(poll)
+            db.merge(poll)
 
         else:
-            '''prev_question = db.query(Question).filter(
-                Question.poll_id == data.get("poll_id"),
-                Question.next_question_id == None
-            ).order_by(Question.id.desc()).first()'''
-
+            logging.debug("NOT first question")
             result = await db.execute(
                 select(Question).filter(
-                    Question.poll_id == data.get("poll_id"),
-                    Question.next_question_id == None
+                    Question.id == data.get("prev_question_id")
                     ).order_by(Question.id.desc())
                 )
             prev_question = result.scalars().first()
-
-
+            prev_question.next_question_id = question.id
+            question.prev_question_id = prev_question.id 
+            logging.debug(f"prev_question.id={prev_question.id}")
+            db.merge(prev_question)
         db.add(question)
         await db.commit()
+
+
         await callback_query.message.answer(
             f"Вопрос добален.\nЗадайте следующий",
             reply_markup=end_keyboard
