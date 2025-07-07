@@ -80,59 +80,81 @@ async def capture_question(message: Message, state: FSMContext):
 
 @router.callback_query(lambda c: c.data in ["arbitrary_choice", "single_choice", "multipy_choice"])
 async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMContext):
-    logging.debug("entered capture_answer_type")
-    await callback_query.answer() 
-    with_options = False
-    with_multipy_options = False
-    match callback_query.data:
-        case "arbitrary_choice":
-            pass
-        case "single_choice":
-            with_options = True
-        case "multipy_choice":
-            with_options = True
-            with_multipy_options = True
-        case _:
-            await callback_query.message.answer("Формат ответа не совпадает с возможными.\nВыберите другой")
-            return
+    """Handle answer type selection and create question with proper relationships."""
+    logging.debug("Entered answer type selection handler")
+    
+    await callback_query.answer()
+    
+    # Determine question type from callback
+    answer_type = callback_query.data
+    with_options = answer_type in ["single_choice", "multipy_choice"]
+    with_multipy_options = answer_type == "multipy_choice"
+    
+    if answer_type not in ["arbitrary_choice", "single_choice", "multipy_choice"]:
+        logging.warning(f"Invalid answer type received: {answer_type}")
+        await callback_query.message.answer("Формат ответа не совпадает с возможными.\nВыберите другой")
+        return
+    
     async for db in get_db():
         data = await state.get_data()
-        question = Question(with_options=with_options, with_multipy_options=with_multipy_options, poll_id=data.get("poll_id"), text=data.get("question"))
-        logging.debug(f"question={question}")
-        logging.debug(data.get("first_question"))
-        if data.get("first_question") == True:
-            logging.debug("its first question")
-            result = await db.execute(
-                select(Poll).filter(Poll.id == data.get("poll_id"))
-                )
-            poll = result.scalars().first()
-            poll.first_question_id = question.id
-            await state.update_data(first_question=False)
-            await state.update_data(prev_question_id = question.id)
-            logging.debug(poll)
-            db.merge(poll)
-
-        else:
-            logging.debug("NOT first question")
-            result = await db.execute(
-                select(Question).filter(
-                    Question.id == data.get("prev_question_id")
-                    ).order_by(Question.id.desc())
-                )
-            prev_question = result.scalars().first()
-            prev_question.next_question_id = question.id
-            question.prev_question_id = prev_question.id 
-            logging.debug(f"prev_question.id={prev_question.id}")
-            db.merge(prev_question)
+        
+        # Create new question
+        question = Question(
+            with_options=with_options,
+            with_multipy_options=with_multipy_options,
+            poll_id=data.get("poll_id"),
+            text=data.get("question")
+        )
+        logging.debug(f"Created question object: {question}")
+        
         db.add(question)
+        await db.flush()  # Get the ID before commit
+        
+        # Handle first question case
+        if data.get("first_question", False):
+            poll = await db.get(Poll, data.get("poll_id"))
+            if not poll:
+                logging.error(f"Poll not found with ID: {data.get('poll_id')}")
+                await callback_query.message.answer("Error: Poll not found")
+                return
+                
+            poll.first_question_id = question.id
+            await state.update_data({
+                "first_question": False,
+                "prev_question_id": question.id
+            })
+            
+        # Handle subsequent questions
+        else:
+            prev_question_id = data.get("prev_question_id")
+            
+            if not prev_question_id:
+                logging.error("Missing previous question ID in state")
+                await callback_query.message.answer("Error: Missing previous question reference")
+                return
+                
+            prev_question = await db.get(Question, prev_question_id)
+            if not prev_question:
+                logging.error(f"Previous question not found with ID: {prev_question_id}")
+                await callback_query.message.answer("Error: Previous question not found")
+                return
+                
+            prev_question.next_question_id = question.id
+            question.prev_question_id = prev_question.id
+            logging.debug(f"Linked question {question.id} to previous question {prev_question.id}")
+        
         await db.commit()
+        logging.info(f"Successfully created question with ID: {question.id}")
+        
+        # Update state with new previous question ID
+        await state.update_data({"prev_question_id": question.id})
 
 
         await callback_query.message.answer(
             f"Вопрос добален.\nЗадайте следующий",
             reply_markup=end_keyboard
         )
-        logging.info(f"Добавлен вопрос: {question}")
+
     await state.set_state(PollFSM.question)
 
 
