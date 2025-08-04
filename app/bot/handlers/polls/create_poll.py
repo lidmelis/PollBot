@@ -8,7 +8,7 @@ from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionSender
 from sqlalchemy.future import select
 from app.core.db import get_db
-from app.core.models import Poll, Question
+from app.core.models import Poll, Question, AnswerOption
 from app.bot.keyboards import choose_options_keyboard, end_keyboard
 
       
@@ -90,6 +90,7 @@ async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMCon
     with_options = answer_type in ["single_choice", "multipy_choice"]
     with_multipy_options = answer_type == "multipy_choice"
     
+    
     if answer_type not in ["arbitrary_choice", "single_choice", "multipy_choice"]:
         logging.warning(f"Invalid answer type received: {answer_type}")
         await callback_query.message.answer("Формат ответа не совпадает с возможными.\nВыберите другой")
@@ -147,15 +148,49 @@ async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMCon
         logging.info(f"Successfully created question with ID: {question.id}")
         
         # Update state with new previous question ID
-        await state.update_data({"prev_question_id": question.id})
+        await state.update_data({
+            "prev_question_id": question.id,
+            "current_question_id": question.id
+        })
 
 
+
+    if with_options:
+        await callback_query.message.answer(
+            "Введите варианты ответов через тире (-), например:\n"
+            "Вариант 1 - Вариант 2 - Вариант 3"
+        )
+        await state.set_state(PollFSM.options)
+    else:
         await callback_query.message.answer(
             f"Вопрос добален.\nЗадайте следующий",
             reply_markup=end_keyboard
         )
+        await state.set_state(PollFSM.question)
 
+@router.message(F.text, PollFSM.options)
+async def capture_options(message: Message, state: FSMContext):
+    options = [opt.strip() for opt in message.text.split('-') if opt.strip()]
+    if len(options) < 2:
+        await message.answer("Нужно ввести хотя бы 2 варианта ответа через тире. Попробуйте еще раз\n"
+                           "Например: Вариант 1 - Вариант 2 - Вариант 3")
+        return
+    async for db in get_db():
+        data = await state.get_data()
+        question_id = data.get("current_question_id")
+        
+        for option_text in options:
+            db.add(AnswerOption(
+                question_id=question_id,
+                text=option_text
+            ))
+        await db.commit()
+    await message.answer(
+        f"Варианты ответов сохранены. \nЗадайте следующий вопрос",
+        reply_markup=end_keyboard
+    )
     await state.set_state(PollFSM.question)
+
 
 
 @router.callback_query(lambda c: c.data in ["end_poll"])
@@ -163,4 +198,3 @@ async def capture_end(callback_query: types.CallbackQuery, state: FSMContext):
     await callback_query.answer() 
     await callback_query.message.answer(f"Опрос создан", reply_markup=None)
     await state.clear()
-
