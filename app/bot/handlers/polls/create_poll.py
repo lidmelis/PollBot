@@ -80,7 +80,6 @@ async def capture_question(message: Message, state: FSMContext):
 
 @router.callback_query(lambda c: c.data in ["arbitrary_choice", "single_choice", "multipy_choice"])
 async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMContext):
-    """Handle answer type selection and create question with proper relationships."""
     logging.debug("Entered answer type selection handler")
     
     await callback_query.answer()
@@ -99,7 +98,6 @@ async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMCon
     async for db in get_db():
         data = await state.get_data()
         
-        # Create new question
         question = Question(
             with_options=with_options,
             with_multipy_options=with_multipy_options,
@@ -111,7 +109,6 @@ async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMCon
         db.add(question)
         await db.flush()  # Get the ID before commit
         
-        # Handle first question case
         if data.get("first_question", False):
             poll = await db.get(Poll, data.get("poll_id"))
             if not poll:
@@ -124,8 +121,7 @@ async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMCon
                 "first_question": False,
                 "prev_question_id": question.id
             })
-            
-        # Handle subsequent questions
+
         else:
             prev_question_id = data.get("prev_question_id")
             
@@ -147,7 +143,6 @@ async def capture_answer_type(callback_query: types.CallbackQuery, state: FSMCon
         await db.commit()
         logging.info(f"Successfully created question with ID: {question.id}")
         
-        # Update state with new previous question ID
         await state.update_data({
             "prev_question_id": question.id,
             "current_question_id": question.id
