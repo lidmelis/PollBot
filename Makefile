@@ -15,7 +15,11 @@ install: venvv
 
 # Запуск тестов
 test: install
-	$(PYTHON) -m pytest $(TESTS)
+	PYTHONPATH=. pytest -W ignore::DeprecationWarning -v --tb=short --maxfail=3 --ff
+
+test-full: install
+	PYTHONPATH=. pytest -W ignore::DeprecationWarning -v 
+	
 
 # Запуск линтера (flake8)
 lint: install
