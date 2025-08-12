@@ -11,7 +11,7 @@ venvv:
 
 # Установка зависимостей
 install: venvv
-	$(PIP) install -r $(REQUIREMENTS)
+	$(PIP) install -r $(REQUIREMENTS) --quiet --quiet
 
 # Запуск тестов
 test: install
