@@ -7,13 +7,13 @@ services:
     depends_on:
       - db
     environment:
-      - BOT_TOKEN=8195217921:AAE-FKR0BGv5ibd-9q5zcrHUSK7AYKGeXQ4
-      - LOG_LEVEL=DEBUG
-      - DB_URL=postgresql+asyncpg://user:password@db:5432/polldb
+      - "BOT_TOKEN=${BOT_TOKEN}"
+      - "LOG_LEVEL=${LOG_LEVEL}"
+      - "DB_URL=${DB_URL}"
 
 
     ports:
-      - "8000:8000" # Настройте порт для приложения, если нужно.
+      - "${TG_PORT}:${TG_PORT}"
 
   db:
     image: postgres:15
@@ -23,9 +23,22 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: polldb
     ports:
-      - "5432:5432"
+      - "${PG_PORT}:${PG_PORT}"
     volumes:
       - db_data:/var/lib/postgresql/data
+
+  migrator:
+      build:
+        context: .
+        dockerfile: migrator.Dockerfile
+      restart: on-failure
+      environment:
+        - "BOT_TOKEN=${BOT_TOKEN}"
+        - "LOG_LEVEL=${LOG_LEVEL}"
+        - "ALEMBIC_URL=${ALEMBIC_URL}"
+        - "DB_HOST=${DB_HOST}"
+
+        - "DB_URL=${DB_URL}"
 
 volumes:
   db_data:

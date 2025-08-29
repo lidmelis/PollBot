@@ -11,11 +11,15 @@ venvv:
 
 # Установка зависимостей
 install: venvv
-	$(PIP) install -r $(REQUIREMENTS)
+	$(PIP) install -r $(REQUIREMENTS) --quiet --quiet
 
 # Запуск тестов
 test: install
-	$(PYTHON) -m pytest $(TESTS)
+	PYTHONPATH=. pytest -W ignore::DeprecationWarning -v --tb=short --maxfail=3 --ff
+
+test-full: install
+	PYTHONPATH=. pytest -W ignore::DeprecationWarning -v 
+	
 
 # Запуск линтера (flake8)
 lint: install
@@ -34,7 +38,7 @@ clean:
 	rm -rf $(VENV)
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
-
+	
 # Справка
 help:
 	@echo "Использование: make [цель]"
@@ -47,3 +51,8 @@ help:
 	@echo "  run        Запустить приложение"
 	@echo "  clean      Очистить проект"
 	@echo "  help       Показать эту справку"
+
+rebuild:
+	docker compose down
+	docker compose build --no-cache
+	docker compose up -d
