@@ -27,7 +27,8 @@ class Poll(Base):
 
 
 class Question(Base):
-    __tablename__ = "questions"  # Fixed double underscores
+    __tablename__ = "questions"
+
 
     id = Column(Integer, primary_key=True, index=True)
     poll_id = Column(Integer, ForeignKey("polls.id"), nullable=False)
