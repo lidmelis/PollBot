@@ -6,9 +6,8 @@ from app.bot.commands import register_handlers
 async def main():
     config = load_config()
     logging.basicConfig(level=config.LOG_LEVEL)
-    logging.debug(config.BOT_TOKEN)
     bot = Bot(token=config.BOT_TOKEN)
-
+    
     dp = Dispatcher()
     
     # Инициализация базы данных
